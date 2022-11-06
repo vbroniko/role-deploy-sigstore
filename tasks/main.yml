@@ -1,0 +1,9 @@
+---
+# tasks file for deploy-sigstore
+
+#- name: Deploy Rekor
+#  ansible.builtin.include_tasks: install-rekor.yml
+
+- name: Deploy Fulcio
+  ansible.builtin.include_tasks: install-fulcio.yml
+

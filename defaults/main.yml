@@ -1,0 +1,5 @@
+---
+# defaults file for deploy-sigstore
+deploy_sigstore_db_name: sigstoredb
+deploy_sigstore_db_user: rekor
+deploy_sigstore_db_pass: rekor

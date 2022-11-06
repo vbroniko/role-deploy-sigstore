@@ -1,0 +1,61 @@
+---
+- name: Add the EPEL repository for softhsm
+  ansible.builtin.dnf:
+    name:
+      - https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    state: present
+    validate_certs: no
+    disable_gpg_check: yes
+
+- name: Ensure softhsm and opensc are installed
+  ansible.builtin.dnf:
+    name:
+      - softhsm
+      - opensc
+    state: present
+
+- name: Clone the Fulcio public repository
+  ansible.builtin.git:
+    repo: https://github.com/sigstore/fulcio.git
+    dest: /tmp/fulcio
+    force: yes
+    version: v0.4.0 #for go 1.17
+
+- name: Build the Fulcio binary
+  shell:
+    cmd: "go build ."
+    chdir: "/tmp/fulcio"
+
+- name: Move the fulcio binary into /usr/local/bin
+  ansible.builtin.copy:
+    src: /tmp/fulcio/fulcio
+    dest: /usr/local/bin
+    mode: u=rwx,g=rx,o=x
+
+- name: Create the token directory for sigstore
+  ansible.builtin.file:
+    path: /tmp/sigstore-local/tokens
+    mode: '0755'
+    state: directory
+
+- name: Create the SOFTHSM2 config file
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/softhsm2.j2"
+    dest: /tmp/sigstore-local/softhsm2.conf
+
+- name: Create an HSM Token
+  ansible.builtin.expect:
+    command: "softhsm2-util --init-token --slot 0 --label fulcio"
+    responses:
+      'Please enter SO PIN': 2324
+      'Please reenter SO PIN': 2324
+      'Please enter user PIN': 2324
+      'Please reenter user PIN': 2324
+  environment:
+   SOFTHSM2_CONF: "/tmp/sigstore-local/softhsm2.conf"
+
+- name: Create the config directory for pkcs11 crypto library
+  ansible.builtin.file:
+    path: /tmp/sigstore-local/config
+    mode: '0755'
+    state: directory
